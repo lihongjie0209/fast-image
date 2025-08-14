@@ -52,7 +52,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## 📊 压缩效果对比
 
-> 📋 **详细结果**: 查看 [压缩结果对比文档](COMPRESSION_RESULTS.md) 了解完整的图片对比和分析
+> 📋 **详细结果**: 查看 [压缩结果对比文档](COMPRESSION_RESULTS.md) 了解完整的图片对比和分析  
+> ⚡ **性能分析**: 查看 [性能分析报告](PERFORMANCE_ANALYSIS.md) 了解数据转换开销和优化建议
 
 我们使用5MB的测试图片进行了全面的压缩测试，结果如下：
 
@@ -178,6 +179,9 @@ cargo test test_png_compression_with_sample_file -- --nocapture
 
 # 运行JPEG压缩测试  
 cargo test test_jpeg_compression_with_sample_file -- --nocapture
+
+# 运行性能基准测试
+cargo test --test performance_benchmark -- --nocapture
 ```
 
 ## 🚀 性能基准

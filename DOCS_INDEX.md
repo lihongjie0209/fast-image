@@ -6,7 +6,8 @@
 |------|------|------|
 | [README.md](README.md) | 📖 项目主文档 | 项目介绍、API文档、使用指南 |
 | [COMPRESSION_RESULTS.md](COMPRESSION_RESULTS.md) | 🖼️ 压缩结果对比 | 详细的图片压缩效果展示 |
-| [TEST_REPORT.md](TEST_REPORT.md) | 🧪 测试报告 | 技术测试详情和性能分析 |
+| [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md) | ⚡ 性能分析报告 | 数据转换开销分析和优化建议 |
+| [TEST_REPORT.md](TEST_REPORT.md) | 🧪 测试报告 | 技术测试详情和性能基准 |
 | [images/README.md](images/README.md) | 📁 图片说明 | 图片文件夹结构和使用说明 |
 
 ## 🎯 快速导航
@@ -18,7 +19,9 @@
 
 ### 👨‍💻 开发者指南  
 - **技术细节**: 查看 [TEST_REPORT.md](TEST_REPORT.md) 了解实现原理
+- **性能分析**: 查看 [PERFORMANCE_ANALYSIS.md](PERFORMANCE_ANALYSIS.md) 了解优化建议
 - **测试运行**: 使用 `cargo test --test compression_tests -- --nocapture`
+- **性能基准**: 使用 `cargo test --test performance_benchmark -- --nocapture`
 - **示例程序**: 运行 `cargo run --example compress_image`
 
 ### 🖼️ 图片资源
@@ -56,6 +59,7 @@ JPEG     | 95.5%     | 30-70    | 照片、复杂图像
 | JPEG压缩测试 | ✅ | 4个质量级别测试 |
 | 格式检测测试 | ✅ | PNG/JPEG/未知格式 |
 | 性能基准测试 | ✅ | 压缩时间测量 |
+| 内存使用分析 | ✅ | 数据转换开销分析 |
 | Trait接口测试 | ✅ | 通用压缩接口 |
 
 ## 🎨 使用示例
