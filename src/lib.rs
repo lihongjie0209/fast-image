@@ -1,5 +1,8 @@
 mod opts;
 
+// JNI module for Java interoperability
+pub mod jni_call;
+
 pub use opts::*;
 
 #[cfg(test)]

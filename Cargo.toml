@@ -1,7 +1,17 @@
 [package]
 name = "fast-image"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
+description = "High-performance image compression library with JNI support"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/lihongjie0209/fast-image"
+authors = ["lihongjie <your-email@example.com>"]
+keywords = ["image", "compression", "jni", "png", "jpeg"]
+categories = ["multimedia::images", "api-bindings"]
+
+[lib]
+name = "fast_image"
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 imagequant = "4.0"
@@ -9,3 +19,24 @@ mozjpeg = "0.10"
 webp = "0.3"
 image = "0.25"
 png = "0.17"
+jni = "0.21"
+
+[profile.release]
+# Optimize for size and performance
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+# Platform-specific optimizations will be handled by CI
+[profile.release.package."*"]
+opt-level = 3
+
+# Metadata for releases
+[package.metadata.release]
+pre-release-commit-message = "Release {{version}}"
+pro-release-commit-message = "Start development of {{version}}"
+tag-message = "Release {{version}}"
+tag-name = "v{{version}}"
+dev-version-ext = "dev"

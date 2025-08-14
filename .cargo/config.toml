@@ -1,0 +1,31 @@
+[build]
+# Default target for Windows development
+# target = "x86_64-pc-windows-msvc"
+
+[target.x86_64-pc-windows-msvc]
+# Windows x64 MSVC toolchain
+
+[target.x86_64-pc-windows-gnu] 
+# Windows x64 MinGW toolchain
+
+[target.aarch64-pc-windows-msvc]
+# Windows ARM64 MSVC toolchain
+
+[target.x86_64-unknown-linux-gnu]
+# Linux x64 GNU toolchain  
+
+[target.aarch64-unknown-linux-gnu]
+# Linux ARM64 GNU toolchain
+
+[target.x86_64-apple-darwin]
+# macOS Intel x64
+
+[target.aarch64-apple-darwin]  
+# macOS Apple Silicon ARM64
+
+# Cross-compilation linkers (uncomment and configure as needed)
+# [target.x86_64-unknown-linux-gnu]
+# linker = "x86_64-linux-gnu-gcc"
+
+# [target.aarch64-unknown-linux-gnu]  
+# linker = "aarch64-linux-gnu-gcc"

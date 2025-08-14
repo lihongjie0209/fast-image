@@ -5,6 +5,40 @@
 
 一个用 Rust 编写的高性能图像压缩库，支持 PNG 和 JPEG 格式的智能压缩。
 
+## 🏗️ 自动化构建
+
+本项目使用 GitHub Actions 自动构建多平台原生库：
+
+### 🎯 支持平台（自动构建）
+- **Windows x64** (`fast_image-windows-x86_64.dll`)
+- **Windows ARM64** (`fast_image-windows-aarch64.dll`)  
+- **Linux x64** (`libfast_image-linux-x86_64.so`)
+- **Linux ARM64** (`libfast_image-linux-aarch64.so`)
+- **macOS Intel** (`libfast_image-macos-x86_64.dylib`)
+- **macOS Apple Silicon** (`libfast_image-macos-aarch64.dylib`)
+
+### 📦 获取预构建库
+
+1. **从 GitHub Releases**（推荐）:
+   - 访问 [Releases 页面](https://github.com/lihongjie0209/fast-image/releases)
+   - 下载最新版本的所有平台库
+   - 或下载特定平台的单个库文件
+
+2. **手动触发构建**:
+   ```bash
+   # 创建新版本发布
+   ./release.sh           # Linux/macOS
+   ./release.bat          # Windows
+   
+   # 或推送版本标签
+   git tag v0.2.1
+   git push origin v0.2.1
+   ```
+
+3. **GitHub Actions 构建产物**:
+   - 每次提交都会构建所有平台
+   - 可从 Actions 标签页下载测试版本
+
 ## ✨ 特性
 
 - 🚀 **高性能压缩**: 使用业界领先的压缩算法

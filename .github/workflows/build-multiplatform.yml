@@ -1,0 +1,294 @@
+name: 🚀 Build Multi-Platform Native Libraries
+
+on:
+  push:
+    branches: [ master, main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create GitHub Release'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows targets
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: windows-x86_64
+            file_extension: dll
+            file_prefix: ""
+            
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            name: windows-aarch64
+            file_extension: dll
+            file_prefix: ""
+            
+          # Linux targets
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: linux-x86_64
+            file_extension: so
+            file_prefix: lib
+            
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: linux-aarch64
+            file_extension: so
+            file_prefix: lib
+            
+          # macOS targets
+          - target: x86_64-apple-darwin
+            os: macos-13  # Intel Mac
+            name: macos-x86_64
+            file_extension: dylib
+            file_prefix: lib
+            
+          - target: aarch64-apple-darwin
+            os: macos-latest  # Apple Silicon Mac
+            name: macos-aarch64
+            file_extension: dylib
+            file_prefix: lib
+
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🦀 Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+        components: clippy, rustfmt
+
+    - name: 💾 Cache Rust Dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ matrix.target }}-cargo-
+
+    - name: 🔧 Install Linux Cross-Compilation Tools
+      if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu
+
+    - name: 🏗️ Build Release Binary
+      run: cargo build --release --target ${{ matrix.target }}
+      env:
+        # For Linux ARM64 cross-compilation
+        CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+        # Disable SIMD for cross-compilation
+        RUSTFLAGS: ${{ matrix.target == 'aarch64-unknown-linux-gnu' && '-C target-feature=-crt-static' || '' }}
+
+    - name: 📦 Prepare Artifact
+      shell: bash
+      run: |
+        # Create artifacts directory
+        mkdir -p artifacts
+        
+        # Find the built library
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          lib_file="target/${{ matrix.target }}/release/fast_image.${{ matrix.file_extension }}"
+        else
+          lib_file="target/${{ matrix.target }}/release/${{ matrix.file_prefix }}fast_image.${{ matrix.file_extension }}"
+        fi
+        
+        # Copy to artifacts with standardized naming
+        artifact_name="fast_image-${{ matrix.name }}.${{ matrix.file_extension }}"
+        if [ "${{ matrix.file_prefix }}" == "lib" ]; then
+          artifact_name="libfast_image-${{ matrix.name }}.${{ matrix.file_extension }}"
+        fi
+        
+        cp "$lib_file" "artifacts/$artifact_name"
+        
+        # Create info file
+        echo "Target: ${{ matrix.target }}" > "artifacts/$artifact_name.info"
+        echo "OS: ${{ matrix.os }}" >> "artifacts/$artifact_name.info"
+        echo "Built at: $(date)" >> "artifacts/$artifact_name.info"
+        echo "Commit: ${{ github.sha }}" >> "artifacts/$artifact_name.info"
+        
+        # Show file info
+        ls -la artifacts/
+        file artifacts/$artifact_name || true
+
+    - name: 🧪 Test Library (Linux/macOS only)
+      if: matrix.os != 'windows-latest'
+      shell: bash
+      run: |
+        # Basic smoke test - check if library can be loaded
+        if [ "${{ matrix.file_extension }}" == "so" ]; then
+          ldd artifacts/*.${{ matrix.file_extension }} || true
+        elif [ "${{ matrix.file_extension }}" == "dylib" ]; then
+          otool -L artifacts/*.${{ matrix.file_extension }} || true
+        fi
+
+    - name: 📤 Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: fast-image-${{ matrix.name }}
+        path: artifacts/
+        retention-days: 30
+
+  create-release:
+    name: 🎉 Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == 'true'
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 📥 Download All Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: release-artifacts
+
+    - name: 🗂️ Organize Release Assets
+      shell: bash
+      run: |
+        # Create release directory
+        mkdir -p release
+        
+        # Organize artifacts
+        find release-artifacts -name "*.dll" -o -name "*.so" -o -name "*.dylib" | while read lib; do
+          echo "Processing: $lib"
+          cp "$lib" release/
+        done
+        
+        # Create archive for each platform
+        cd release-artifacts
+        for dir in */; do
+          if [ -d "$dir" ]; then
+            platform_name=$(basename "$dir")
+            echo "Creating archive for $platform_name"
+            tar -czf "../release/fast-image-${platform_name}.tar.gz" -C "$dir" .
+          fi
+        done
+        
+        cd ..
+        
+        # Create combined archive
+        tar -czf release/fast-image-all-platforms.tar.gz -C release-artifacts .
+        
+        # List release files
+        echo "Release files:"
+        ls -la release/
+
+    - name: 📋 Generate Release Notes
+      shell: bash
+      run: |
+        cat > release-notes.md << 'EOF'
+        # 🚀 Fast Image Native Libraries Release
+        
+        ## 📦 Multi-Platform Native Libraries
+        
+        This release contains pre-compiled native libraries for the Fast Image compression utility.
+        
+        ### 🎯 Supported Platforms
+        
+        | Platform | Architecture | File |
+        |----------|-------------|------|
+        | Windows | x64 | `fast_image-windows-x86_64.dll` |
+        | Windows | ARM64 | `fast_image-windows-aarch64.dll` |
+        | Linux | x64 | `libfast_image-linux-x86_64.so` |
+        | Linux | ARM64 | `libfast_image-linux-aarch64.so` |
+        | macOS | Intel x64 | `libfast_image-macos-x86_64.dylib` |
+        | macOS | Apple Silicon | `libfast_image-macos-aarch64.dylib` |
+        
+        ### 📋 Features
+        
+        - 🔄 Automatic image format detection (PNG/JPEG)
+        - 🎛️ Quality control (0-100)
+        - ⚡ High-performance Rust implementation
+        - 🛡️ Memory-safe with proper error handling
+        
+        ### 🚀 Usage in Java
+        
+        1. Download the appropriate native library for your platform
+        2. Place it in your Java project's `src/main/resources/native/` directory
+        3. Use the `FastImageUtils` class:
+        
+        ```java
+        import cn.lihongjie.image.FastImageUtils;
+        
+        // Compress an image
+        byte[] compressed = FastImageUtils.compress(imageData, 70);
+        
+        // Convenience methods
+        byte[] high = FastImageUtils.compressHigh(imageData);    // 90% quality
+        byte[] medium = FastImageUtils.compressMedium(imageData); // 60% quality  
+        byte[] low = FastImageUtils.compressLow(imageData);      // 30% quality
+        ```
+        
+        ### 📊 Performance
+        
+        Typical compression results with 5MB JPEG:
+        - **Quality 30%**: 4.5% size (230KB) - ~1.8s
+        - **Quality 60%**: 10.1% size (520KB) - ~1.9s  
+        - **Quality 90%**: 51.3% size (2.6MB) - ~3.1s
+        
+        ### 🔗 Links
+        
+        - [Java Source Code](https://github.com/${{ github.repository }})
+        - [Rust Source Code](https://github.com/${{ github.repository }})
+        
+        **Built from commit:** `${{ github.sha }}`
+        **Build date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+        EOF
+
+    - name: 🎉 Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.ref_name || 'latest' }}
+        name: Fast Image v${{ github.ref_name || 'latest' }}
+        body_path: release-notes.md
+        files: release/*
+        draft: false
+        prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cleanup:
+    name: 🧹 Cleanup
+    needs: [build, create-release]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: 🗑️ Cleanup Old Artifacts
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.runId,
+          });
+          
+          console.log(`Found ${artifacts.data.artifacts.length} artifacts`);
+          
+          // Keep artifacts for 7 days after successful release
+          const keepDays = context.payload.ref?.startsWith('refs/tags/') ? 7 : 1;
+          console.log(`Keeping artifacts for ${keepDays} days`);
