@@ -14,6 +14,12 @@ on:
         default: 'false'
         type: boolean
 
+# Add permissions for creating releases
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -254,15 +260,15 @@ jobs:
         - [Java Source Code](https://github.com/${{ github.repository }})
         - [Rust Source Code](https://github.com/${{ github.repository }})
         
-        **Built from commit:** `${{ github.sha }}`
+        **Built from commit:** \`${{ github.sha }}\`
         **Build date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')
         EOF
 
     - name: 🎉 Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ github.ref_name || 'latest' }}
-        name: Fast Image v${{ github.ref_name || 'latest' }}
+        tag_name: ${{ github.ref_name }}
+        name: Fast Image ${{ github.ref_name }}
         body_path: release-notes.md
         files: release/*
         draft: false
