@@ -1,0 +1,11 @@
+[package]
+name = "fast-image"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+imagequant = "4.0"
+mozjpeg = "0.10"
+webp = "0.3"
+image = "0.25"
+png = "0.17"
