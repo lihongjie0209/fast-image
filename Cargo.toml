@@ -20,6 +20,7 @@ webp = "0.3"
 image = "0.25"
 png = "0.17"
 jni = "0.21"
+jpeg-encoder = "0.6"
 
 [profile.release]
 # Optimize for size and performance

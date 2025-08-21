@@ -166,6 +166,30 @@ pub fn do_jpeg_compression(data: &[u8], quality: u8) -> Result<Vec<u8>, String> 
     Ok(jpeg_data)
 }
 
+pub fn do_jpeg_compression_fast(data: &[u8], quality: u8) -> Result<Vec<u8>, String> {
+    // Load image data using the image crate for initial parsing
+    let img = image::load_from_memory(data)
+        .map_err(|e| format!("Failed to load image: {}", e))?;
+
+    // Convert to RGB format
+    let rgb_img = img.to_rgb8();
+    let width = rgb_img.width() as u16;
+    let height = rgb_img.height() as u16;
+    let raw_data = rgb_img.as_raw();
+
+    // Pre-allocate output buffer with estimated size
+    let mut jpeg_data = Vec::with_capacity(data.len() / 2);
+
+    // Use the dedicated jpeg-encoder crate for better performance
+    {
+        let encoder = jpeg_encoder::Encoder::new(&mut jpeg_data, quality);
+        encoder.encode(raw_data, width, height, jpeg_encoder::ColorType::Rgb)
+            .map_err(|e| format!("Failed to encode JPEG with fast encoder: {}", e))?;
+    }
+
+    Ok(jpeg_data)
+}
+
 //
 // pub fn do_webp_compression(data: &[u8], quality: u8) -> Result<Vec<u8>, String> {
 //     // Load image data
