@@ -105,13 +105,13 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y musl-tools
 
-    - name: 🏗️ Build Release Binary (MUSL static)
+    - name: 🏗️ Build Release Binary (MUSL shared)
       if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-musl'
       run: cargo build --release --target ${{ matrix.target }}
       env:
         CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
         CC_x86_64_unknown_linux_musl: musl-gcc
-        RUSTFLAGS: "-C target-feature=+crt-static"
+        # Remove +crt-static to allow .so generation for cdylib
 
     - name: 🏗️ Build Release Binary (Linux ARM64 GNU)
       if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
