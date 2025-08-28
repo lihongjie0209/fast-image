@@ -130,6 +130,12 @@ jobs:
         # Create artifacts directory
         mkdir -p artifacts
         
+        # Debug: Show what files were actually built
+        echo "=== Debug: Target directory contents ==="
+        ls -la target/${{ matrix.target }}/release/ || echo "Target directory not found"
+        echo "=== Debug: Looking for library files ==="
+        find target/${{ matrix.target }}/release/ -name "*fast_image*" -type f || echo "No fast_image files found"
+        
         # Find the built library
         if [ "${{ matrix.os }}" == "windows-latest" ]; then
           lib_file="target/${{ matrix.target }}/release/fast_image.${{ matrix.file_extension }}"
