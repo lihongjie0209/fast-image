@@ -11,8 +11,8 @@ on:
       create_release:
         description: 'Create GitHub Release'
         required: false
-        default: 'false'
         type: boolean
+        default: false
 
 # Add permissions for creating releases
 permissions:
@@ -45,7 +45,7 @@ jobs:
             file_prefix: ""
             
           # Linux targets
-          - target: x86_64-unknown-linux-gnu
+          - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             name: linux-x86_64
             file_extension: so
@@ -99,13 +99,30 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y gcc-aarch64-linux-gnu
 
-    - name: 🏗️ Build Release Binary
+    - name: 🔧 Install MUSL Tools (Linux x86_64)
+      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-musl'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y musl-tools
+
+    - name: 🏗️ Build Release Binary (MUSL static)
+      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-musl'
       run: cargo build --release --target ${{ matrix.target }}
       env:
-        # For Linux ARM64 cross-compilation
+        CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+        CC_x86_64_unknown_linux_musl: musl-gcc
+        RUSTFLAGS: "-C target-feature=+crt-static"
+
+    - name: 🏗️ Build Release Binary (Linux ARM64 GNU)
+      if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+      run: cargo build --release --target ${{ matrix.target }}
+      env:
         CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-        # Disable SIMD for cross-compilation
-        RUSTFLAGS: ${{ matrix.target == 'aarch64-unknown-linux-gnu' && '-C target-feature=-crt-static' || '' }}
+        RUSTFLAGS: "-C target-feature=-crt-static"
+
+    - name: 🏗️ Build Release Binary (default)
+      if: matrix.target != 'x86_64-unknown-linux-musl' && matrix.target != 'aarch64-unknown-linux-gnu'
+      run: cargo build --release --target ${{ matrix.target }}
 
     - name: 📦 Prepare Artifact
       shell: bash
