@@ -11,8 +11,8 @@ on:
       create_release:
         description: 'Create GitHub Release'
         required: false
+        default: 'false'
         type: boolean
-        default: false
 
 # Add permissions for creating releases
 permissions:
@@ -45,7 +45,7 @@ jobs:
             file_prefix: ""
             
           # Linux targets
-          - target: x86_64-unknown-linux-musl
+          - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             name: linux-x86_64
             file_extension: so
@@ -99,42 +99,19 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y gcc-aarch64-linux-gnu
 
-    - name: 🔧 Install MUSL Tools (Linux x86_64)
-      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-musl'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y musl-tools
-
-    - name: 🏗️ Build Release Binary (MUSL shared)
-      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-musl'
+    - name: 🏗️ Build Release Binary
       run: cargo build --release --target ${{ matrix.target }}
       env:
-        CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
-        CC_x86_64_unknown_linux_musl: musl-gcc
-        # Remove +crt-static to allow .so generation for cdylib
-
-    - name: 🏗️ Build Release Binary (Linux ARM64 GNU)
-      if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
-      run: cargo build --release --target ${{ matrix.target }}
-      env:
+        # For Linux ARM64 cross-compilation
         CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-        RUSTFLAGS: "-C target-feature=-crt-static"
-
-    - name: 🏗️ Build Release Binary (default)
-      if: matrix.target != 'x86_64-unknown-linux-musl' && matrix.target != 'aarch64-unknown-linux-gnu'
-      run: cargo build --release --target ${{ matrix.target }}
+        # Disable SIMD for cross-compilation
+        RUSTFLAGS: ${{ matrix.target == 'aarch64-unknown-linux-gnu' && '-C target-feature=-crt-static' || '' }}
 
     - name: 📦 Prepare Artifact
       shell: bash
       run: |
         # Create artifacts directory
         mkdir -p artifacts
-        
-        # Debug: Show what files were actually built
-        echo "=== Debug: Target directory contents ==="
-        ls -la target/${{ matrix.target }}/release/ || echo "Target directory not found"
-        echo "=== Debug: Looking for library files ==="
-        find target/${{ matrix.target }}/release/ -name "*fast_image*" -type f || echo "No fast_image files found"
         
         # Find the built library
         if [ "${{ matrix.os }}" == "windows-latest" ]; then
