@@ -152,10 +152,23 @@ pub fn do_png_compression(data: &[u8], quality: u8) -> Result<Vec<u8>, String> {
         
         // Convert palette to the format PNG encoder expects
         let png_palette: Vec<u8> = palette.iter()
-            .flat_map(|color| vec![color.r, color.g, color.b])
+            .flat_map(|color| [color.r, color.g, color.b])
             .collect();
         
+        // Build tRNS (transparency) chunk for indexed PNGs to preserve alpha
+        // PNG spec: tRNS for palette images provides alpha for the first N entries;
+        // remaining entries are assumed fully opaque (255).
+        let mut trns: Vec<u8> = palette.iter().map(|c| c.a).collect();
+        // Trim trailing fully-opaque alpha values to keep the chunk minimal
+        while trns.last().copied() == Some(255) {
+            trns.pop();
+        }
+        
         encoder.set_palette(png_palette);
+        // Only set tRNS if there is any transparency present
+        if !trns.is_empty() {
+            encoder.set_trns(trns);
+        }
         
         let mut writer = encoder.write_header()
             .map_err(|e| format!("Failed to write PNG header: {}", e))?;
