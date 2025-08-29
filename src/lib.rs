@@ -6,6 +6,9 @@ pub mod jni_call;
 pub use opts::*;
 
 #[cfg(test)]
+mod zero_copy_test;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
